@@ -1,0 +1,46 @@
+# 工作流名称
+name: generate animation
+
+# 触发条件
+on:
+  # 定时触发：每天自动运行一次 (UTC时间0点，即北京时间早上8点)
+  schedule:
+    - cron: "0 0 * * *"
+  # 允许手动触发：方便你随时更新
+  workflow_dispatch:
+  # 代码推送触发：当你往main分支推送代码时也会运行
+  push:
+    branches:
+      - main  # 如果你的默认分支是master，请改为master
+
+# 任务定义
+jobs:
+  generate:
+    # 运行环境
+    runs-on: ubuntu-latest
+    # 权限设置，允许向仓库写入内容
+    permissions:
+      contents: write
+    timeout-minutes: 5
+
+    steps:
+      # 步骤1：使用 Platane/snk 工具生成贪吃蛇SVG图
+      - name: generate github-contribution-grid-snake.svg
+        uses: Platane/snk/svg-only@v3  # 使用专生成SVG的版本
+        with:
+          # 自动获取当前仓库的拥有者作为GitHub用户名
+          github_user_name: ${{ github.repository_owner }}
+          # 定义输出文件：浅色和深色两个版本
+          outputs: |
+            dist/github-contribution-grid-snake.svg
+            dist/github-contribution-grid-snake-dark.svg?palette=github-dark
+
+      # 步骤2：将生成的图片推送到专门的 output 分支
+      - name: push github-contribution-grid-snake.svg to the output branch
+        uses: crazy-max/ghaction-github-pages@v4  # 使用将目录发布到分支的Action
+        with:
+          target_branch: output  # 目标分支名
+          build_dir: dist        # 要发布的本地目录
+        env:
+          # 使用GitHub自动提供的令牌进行认证，无需手动创建
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
